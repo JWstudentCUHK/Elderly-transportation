@@ -3,19 +3,7 @@
  * Version: 20260605-fixed-zero-coordinates
  */
 console.log("💎 [APP] app.js v20260605-fixed-zero-coordinates is LOADING...");
-const PROXY_URL = "https://corsproxy.io/?url=";
-const API_BASE = "https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=";
 
-// 寫一個統一的 fetch 函數
-async function fetchLocation(query) {
-    const fullUrl = PROXY_URL + encodeURIComponent(API_BASE + query);
-    try {
-        const response = await fetch(fullUrl);
-        return await response.json();
-    } catch (error) {
-        console.error("Fetch failed:", error);
-    }
-}
 // --- 1. 全局數據存儲 ---
 let GLOBAL_BUS = [];
 let GLOBAL_GMB = [];
@@ -110,16 +98,6 @@ async function initApp() {
             const res = await fetch(url);
             if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
             return res.text();
-        };
-        
-        const fetchLocation = async (query) => {
-        const PROXY_URL = "https://corsproxy.io/?url=";
-        const API_BASE = "https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=";
-        const fullUrl = PROXY_URL + encodeURIComponent(API_BASE + query);
-        
-        const res = await fetch(fullUrl);
-        if (!res.ok) throw new Error(`API Request failed: ${res.statusText}`);
-        return res.json(); 
         };
 
         const [mtrStationsRaw, mtrExitsRaw, mtrFaresRaw, mtrBusRoutesRaw, mtrBusFaresRaw, mtrBusStopsRaw] = await Promise.all([
@@ -501,23 +479,48 @@ async function geocodeLocation(text, inputElement = null) {
     }
 
     // 2. HK Geodata API
-  const tryApi = async (query) => {
-    // Using a different proxy approach that is often more compatible
-    const baseUrl = "https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=";
-    const proxyUrl = "https://api.allorigins.win/get?url=";
-    const url = proxyUrl + encodeURIComponent(baseUrl + query);
-
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        // allorigins wraps the real response in a 'contents' field
-        return JSON.parse(data.contents); 
-    } catch (err) {
-        console.error("API Call failed:", err);
-        return { features: [] }; // Return empty results to prevent crash
-    }
-};
+    const tryApi = async (query) => {
+        try {
+            const url = `https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=${encodeURIComponent(query)}`;
+            console.log(`📡 [GEO] API Request: ${url}`);
+            
+            const response = await fetch(url, {
+                headers: { 'User-Agent': 'MyBusRouteApp/1.0' }
+            });
+            console.log(`📡 [GEO] API Status: ${response.status} ${response.statusText}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`📡 [GEO] HK Geodata API Response for "${query}":`, data);
+                
+                if (data && data.length > 0) {
+                    const result = data[0];
+                    const coords = convertCoords(parseFloat(result.x), parseFloat(result.y));
+                    const lat = coords.lat;
+                    const lng = coords.lng;
+                    
+                    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                        console.log(`✅ [GEO] API found valid coordinates: ${lat}, ${lng} for "${result.nameZH || result.nameEN}"`);
+                        return {
+                            lat: lat,
+                            lng: lng,
+                            name: result.nameZH || result.nameEN || query
+                        };
+                    } else {
+                        console.error(`❌ [GEO] Geodata result for "${query}" is invalid:`, result);
+                    }
+                } else {
+                    console.warn(`⚠️ [GEO] Geodata API returned empty results for "${query}"`);
+                }
+            } else {
+                const errorText = await response.text();
+                console.error(`❌ [GEO] API Error Response:`, errorText);
+            }
+        } catch (e) {
+            console.error(`❌ [GEO] Fetch Exception for "${query}":`, e);
+        }
+        return null;
+    };
 
     let geoResult = await tryApi(text);
     
@@ -586,38 +589,15 @@ function initAutocomplete() {
             delete input.dataset.selectedName;
             console.log(`🧹 [AUTO] Dataset cleared for ${item.id}`);
         };
-            
-            input.addEventListener('input', async (e) => {
-                const query = e.target.value.trim();
-                clearDataset();
-                clearTimeout(timeout);
-            
-                // 1. Basic validation: hide box if input is too short
-                if (query.length < 2) {
-                    box.classList.add('hidden');
-                    return;
-                }
-            
-                // 2. Fetch API data
-                try {
-                    console.log("🔍 Searching for:", query);
-                    const results = await tryApi(query);
-                    
-                    // 3. Handle data: if results exist, update UI
-                    if (results && results.features && results.features.length > 0) {
-                        console.log("✅ API Success, rendering results");
-                        // CALL YOUR RENDERING FUNCTION HERE
-                        renderSuggestions(results.features, box); 
-                        box.classList.remove('hidden'); // Show the dropdown
-                    } else {
-                        console.warn("⚠️ API returned no results");
-                        box.classList.add('hidden');
-                    }
-                } catch (err) {
-                    console.error("❌ API Call Failed:", err);
-                    box.classList.add('hidden');
-                }
-            });
+
+        input.addEventListener('input', () => {
+            clearDataset();
+            clearTimeout(timeout);
+            const text = input.value.trim();
+            if (text.length < 2) {
+                box.classList.add('hidden');
+                return;
+            }
 
             timeout = setTimeout(async () => { 
                 const text = input.value.trim(); 
@@ -1227,8 +1207,6 @@ async function runComparison() {
 }
 
 // --- 5. UI 渲染與交互 ---
-
-
 
 function renderResults(results) {
     const list = document.getElementById('comparisonList');
