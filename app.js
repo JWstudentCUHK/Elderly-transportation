@@ -3,7 +3,19 @@
  * Version: 20260605-fixed-zero-coordinates
  */
 console.log("💎 [APP] app.js v20260605-fixed-zero-coordinates is LOADING...");
+const PROXY_URL = "https://corsproxy.io/?url=";
+const API_BASE = "https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=";
 
+// 寫一個統一的 fetch 函數
+async function fetchLocation(query) {
+    const fullUrl = PROXY_URL + encodeURIComponent(API_BASE + query);
+    try {
+        const response = await fetch(fullUrl);
+        return await response.json();
+    } catch (error) {
+        console.error("Fetch failed:", error);
+    }
+}
 // --- 1. 全局數據存儲 ---
 let GLOBAL_BUS = [];
 let GLOBAL_GMB = [];
