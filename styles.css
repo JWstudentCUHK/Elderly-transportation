@@ -111,6 +111,14 @@ label {
     box-shadow: 0 10px 20px rgba(0,0,0,0.3); /* 加強陰影 */
 }
 
+/* Ensure the suggestion box doesn't get cut off on small mobile screens */
+.suggestions-box {
+    width: 100%; 
+    max-width: 100%;
+    /* Add this to prevent it from overflowing the screen on small devices */
+    overflow-x: hidden; 
+}
+
 /* 確保輸入框和建議框緊貼 */
 .large-input {
     position: relative;
