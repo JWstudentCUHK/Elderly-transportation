@@ -111,6 +111,16 @@ async function initApp() {
             if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
             return res.text();
         };
+        
+        const fetchLocation = async (query) => {
+        const PROXY_URL = "https://corsproxy.io/?url=";
+        const API_BASE = "https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=";
+        const fullUrl = PROXY_URL + encodeURIComponent(API_BASE + query);
+        
+        const res = await fetch(fullUrl);
+        if (!res.ok) throw new Error(`API Request failed: ${res.statusText}`);
+        return res.json(); 
+        };
 
         const [mtrStationsRaw, mtrExitsRaw, mtrFaresRaw, mtrBusRoutesRaw, mtrBusFaresRaw, mtrBusStopsRaw] = await Promise.all([
             fetchCSV('mtr_lines_and_stations.csv'),
