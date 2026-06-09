@@ -698,6 +698,7 @@ function initAutocomplete() {
                     box.classList.add('hidden');
                 } 
             }, 400); 
+        });
 
         document.addEventListener('click', (e) => {
             if (!input.contains(e.target) && !box.contains(e.target)) {
@@ -705,7 +706,6 @@ function initAutocomplete() {
             }
         });
     });
-});
 }
 
 // --- 4. 搜尋與路徑計算 ---
