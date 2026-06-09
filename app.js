@@ -503,7 +503,14 @@ async function geocodeLocation(text, inputElement = null) {
     // 2. HK Geodata API
     const tryApi = async (query) => {
         try {
-            const url = `https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=${encodeURIComponent(query)}`;
+                const response = await fetch(url);
+                console.log("API 狀態碼:", response.status); // 如果看到 403，就確認是這裡擋住
+                return await response.json();
+            } catch (error) {
+                console.error("API 請求發生錯誤:", error);
+            }
+        try {
+            const url = `https://api.allorigins.win/get?url=${encodeURIComponent("https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=" + query)}`;
             console.log(`📡 [GEO] API Request: ${url}`);
             
             const response = await fetch(url, {
