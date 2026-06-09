@@ -611,15 +611,38 @@ function initAutocomplete() {
             delete input.dataset.selectedName;
             console.log(`🧹 [AUTO] Dataset cleared for ${item.id}`);
         };
-
-        input.addEventListener('input', () => {
-            clearDataset();
-            clearTimeout(timeout);
-            const text = input.value.trim();
-            if (text.length < 2) {
-                box.classList.add('hidden');
-                return;
-            }
+            
+            input.addEventListener('input', async (e) => {
+                const query = e.target.value.trim();
+                clearDataset();
+                clearTimeout(timeout);
+            
+                // 1. Basic validation: hide box if input is too short
+                if (query.length < 2) {
+                    box.classList.add('hidden');
+                    return;
+                }
+            
+                // 2. Fetch API data
+                try {
+                    console.log("🔍 Searching for:", query);
+                    const results = await tryApi(query);
+                    
+                    // 3. Handle data: if results exist, update UI
+                    if (results && results.features && results.features.length > 0) {
+                        console.log("✅ API Success, rendering results");
+                        // CALL YOUR RENDERING FUNCTION HERE
+                        renderSuggestions(results.features, box); 
+                        box.classList.remove('hidden'); // Show the dropdown
+                    } else {
+                        console.warn("⚠️ API returned no results");
+                        box.classList.add('hidden');
+                    }
+                } catch (err) {
+                    console.error("❌ API Call Failed:", err);
+                    box.classList.add('hidden');
+                }
+            });
 
             timeout = setTimeout(async () => { 
                 const text = input.value.trim(); 
@@ -1229,6 +1252,8 @@ async function runComparison() {
 }
 
 // --- 5. UI 渲染與交互 ---
+
+
 
 function renderResults(results) {
     const list = document.getElementById('comparisonList');
