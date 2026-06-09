@@ -501,55 +501,23 @@ async function geocodeLocation(text, inputElement = null) {
     }
 
     // 2. HK Geodata API
-    const tryApi = async (query) => {
-        try {
-                const response = await fetch(url);
-                console.log("API 狀態碼:", response.status); // 如果看到 403，就確認是這裡擋住
-                return await response.json();
-            } catch (error) {
-                console.error("API 請求發生錯誤:", error);
-            }
-        try {
-            const url = `https://api.allorigins.win/get?url=${encodeURIComponent("https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=" + query)}`;
-            console.log(`📡 [GEO] API Request: ${url}`);
-            
-            const response = await fetch(url, {
-                headers: { 'User-Agent': 'MyBusRouteApp/1.0' }
-            });
-            console.log(`📡 [GEO] API Status: ${response.status} ${response.statusText}`);
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log(`📡 [GEO] HK Geodata API Response for "${query}":`, data);
-                
-                if (data && data.length > 0) {
-                    const result = data[0];
-                    const coords = convertCoords(parseFloat(result.x), parseFloat(result.y));
-                    const lat = coords.lat;
-                    const lng = coords.lng;
-                    
-                    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-                        console.log(`✅ [GEO] API found valid coordinates: ${lat}, ${lng} for "${result.nameZH || result.nameEN}"`);
-                        return {
-                            lat: lat,
-                            lng: lng,
-                            name: result.nameZH || result.nameEN || query
-                        };
-                    } else {
-                        console.error(`❌ [GEO] Geodata result for "${query}" is invalid:`, result);
-                    }
-                } else {
-                    console.warn(`⚠️ [GEO] Geodata API returned empty results for "${query}"`);
-                }
-            } else {
-                const errorText = await response.text();
-                console.error(`❌ [GEO] API Error Response:`, errorText);
-            }
-        } catch (e) {
-            console.error(`❌ [GEO] Fetch Exception for "${query}":`, e);
-        }
-        return null;
-    };
+  const tryApi = async (query) => {
+    // Using a different proxy approach that is often more compatible
+    const baseUrl = "https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=";
+    const proxyUrl = "https://api.allorigins.win/get?url=";
+    const url = proxyUrl + encodeURIComponent(baseUrl + query);
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        // allorigins wraps the real response in a 'contents' field
+        return JSON.parse(data.contents); 
+    } catch (err) {
+        console.error("API Call failed:", err);
+        return { features: [] }; // Return empty results to prevent crash
+    }
+};
 
     let geoResult = await tryApi(text);
     
