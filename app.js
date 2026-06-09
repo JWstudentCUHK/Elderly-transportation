@@ -705,6 +705,7 @@ function initAutocomplete() {
             }
         });
     });
+});
 }
 
 // --- 4. 搜尋與路徑計算 ---
